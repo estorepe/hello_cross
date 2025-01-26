@@ -1,52 +1,61 @@
-name: Linux Build
+name: Linux Build (x64 + ARM64)
 
 on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    runs-on: ${{ contains(matrix.arch, 'arm64') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          ninja-build \
+          libgtk-3-dev \
+          clang \
+          cmake \
+          gcc \
+          g++ \
+          libglu1-mesa
+        
+        # Install Rust
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        
+        # Install Go
+        sudo snap install go --classic
 
     - name: Install Flutter
       uses: subosito/flutter-action@v2
       with:
         channel: stable
-
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc g++ cmake
-        sudo apt install -y ninja-build build-essential clang cmake pkg-config
-        sudo apt install libgtk-3-dev libglib2.0-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-        sudo snap install go --classic
+        architecture: ${{ matrix.arch == 'arm64' && 'arm64' || 'x64' }}
 
     - name: Build Native Binaries
       run: |
-        chmod +x scripts/build_native.sh
-        ./scripts/build_native.sh
+        ./scripts/build_native.sh ${{ matrix.arch }}
+        chmod +x assets/native/linux/*
 
-    - name: Build Flutter Linux App
+    - name: Build Flutter App
       run: |
-        export CMAKE_MAKE_PROGRAM=/usr/bin/ninja
-        export CMAKE_CXX_COMPILER=/usr/bin/clang++
         flutter config --enable-linux-desktop
-        flutter create --platforms=linux .
         flutter clean
         flutter pub get
-        flutter build linux --release
+        flutter build linux --release --target-platform=linux-${{ matrix.arch }}
 
-    - name: Verify Bundle Contents
+    - name: Verify Bundle
       run: |
-        ls -l build/linux/x64/release/bundle/
-        ls -l build/linux/x64/release/bundle/data/flutter_assets/assets/native/linux/
+        ls -lh build/linux/${{ matrix.arch }}/release/bundle/
+        file build/linux/${{ matrix.arch }}/release/bundle/hello_world
 
-    - name: Archive Artifacts
+    - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: linux-app
-        path: build/linux/x64/release/bundle/
+        name: linux-app-${{ matrix.arch }}
+        path: build/linux/${{ matrix.arch }}/release/bundle
