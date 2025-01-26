@@ -19,6 +19,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc g++ cmake
+        sudo apt install -y ninja-build build-essential clang cmake pkg-config
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         sudo snap install go --classic
@@ -30,8 +31,11 @@ jobs:
 
     - name: Build Flutter Linux App
       run: |
+        export CMAKE_MAKE_PROGRAM=/usr/bin/ninja
+        export CMAKE_CXX_COMPILER=/usr/bin/clang++
         flutter config --enable-linux-desktop
         flutter create --platforms=linux .
+        flutter clean
         flutter pub get
         flutter build linux --release
 
