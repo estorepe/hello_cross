@@ -26,7 +26,7 @@ jobs:
     - name: Install Flutter (ARM64)
       run: |
         git clone https://github.com/flutter/flutter.git -b stable --depth 1
-        echo "export PATH=\$PATH:\$PWD/flutter/bin" >> $HOME/.bashrc
+        echo "export PATH=\$PATH:\$PWD/flutter/bin" >> $GITHUB_ENV
         source $HOME/.bashrc
         flutter doctor -v
 
