@@ -1,0 +1,47 @@
+name: Linux Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc g++ cmake
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        sudo snap install go --classic
+
+    - name: Build Native Binaries
+      run: |
+        chmod +x scripts/build_native.sh
+        ./scripts/build_native.sh
+
+    - name: Build Flutter Linux App
+      run: |
+        flutter config --enable-linux-desktop
+        flutter create --platforms=linux .
+        flutter pub get
+        flutter build linux --release
+
+    - name: Verify Bundle Contents
+      run: |
+        ls -l build/linux/x64/release/bundle/
+        ls -l build/linux/x64/release/bundle/data/flutter_assets/assets/native/linux/
+
+    - name: Archive Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux-app
+        path: build/linux/x64/release/bundle/

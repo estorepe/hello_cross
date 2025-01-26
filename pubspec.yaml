@@ -1,0 +1,11 @@
+name: flutter_hello_world
+description: "A native binary demo"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  path_provider: ^2.1.0  # Required for the document directory access
+
+flutter:
+  assets:
+    - assets/native/linux/  # <-- Critical addition for your binaries
