@@ -26,7 +26,8 @@ jobs:
     - name: Install Flutter (ARM64)
       run: |
         git clone https://github.com/flutter/flutter.git -b stable --depth 1
-        echo "$GITHUB_WORKSPACE/flutter/bin" >> $GITHUB_PATH
+        echo "$GITHUB_WORKSPACE/flutter/bin" >> ~/.bashrc
+        source ~/.bashrc
         flutter doctor -v
 
     - name: Build Native Binaries
@@ -36,6 +37,7 @@ jobs:
 
     - name: Build Flutter App
       run: |
+        source ~/.bashrc
         flutter config --enable-linux-desktop
         flutter clean
         flutter pub get
