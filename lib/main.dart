@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io'; // Add this import for Directory, File, and Process
+import 'dart:io'; // For Directory, File, and Process
 
 void main() {
   runApp(const MyApp());
@@ -51,9 +51,11 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
 
       if (!await executable.exists()) {
         final byteData = await rootBundle.load('assets/native/linux/$name');
-        await executable.writeAsBytes(byteData.buffer.asUint8List());
-        await executable.setPermissions(await executable.stat().then((stats) => stats.mode | 0x100));
+        await executable.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
       }
+
+      // Ensure the binary is executable
+      await Process.run('chmod', ['+x', executable.path]);
 
       final result = await Process.run(executable.path, []);
       return result.stdout;
