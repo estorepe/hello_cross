@@ -3,7 +3,7 @@ description: "A native binary demo"
 
 dependencies:
   flutter:
-    sdk: flutter
+    sdk: ^3.6.0
   path_provider: ^2.1.0  # Required for the document directory access
 
 flutter:
