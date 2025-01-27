@@ -30,9 +30,19 @@ jobs:
 
       - name: Build Native Linux Binaries
         run: |
+          mkdir -p assets/native/linux/x64
           chmod +x ./scripts/build_native_linux.sh
           ./scripts/build_native_linux.sh x64
           chmod +x assets/native/linux/x64/*
+
+      - name: Update pubspec.yaml Assets
+        run: |
+          sed -i '/^  assets:/a \
+    # Linux x64 binaries\
+    - assets/native/linux/x64/hello_c\
+    - assets/native/linux/x64/hello_cpp\
+    - assets/native/linux/x64/hello_rust\
+    - assets/native/linux/x64/hello_go' pubspec.yaml
 
       - name: Build Flutter Linux App
         run: |
@@ -76,9 +86,19 @@ jobs:
 
       - name: Build Native Linux ARM64 Binaries
         run: |
+          mkdir -p assets/native/linux/arm64
           chmod +x ./scripts/build_native_linux.sh
           ./scripts/build_native_linux.sh arm64
           chmod +x assets/native/linux/arm64/*
+
+      - name: Update pubspec.yaml Assets
+        run: |
+          sed -i '/^  assets:/a \
+    # Linux ARM64 binaries\
+    - assets/native/linux/arm64/hello_c\
+    - assets/native/linux/arm64/hello_cpp\
+    - assets/native/linux/arm64/hello_rust\
+    - assets/native/linux/arm64/hello_go' pubspec.yaml
 
       - name: Build Flutter Linux ARM64 App
         run: |
@@ -101,7 +121,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Windows Dependencies
-        run: choco install cmake ninja
+        run: choco install cmake ninja -y
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2.13.0
@@ -110,7 +130,20 @@ jobs:
           architecture: x64
 
       - name: Build Native Windows Binaries
-        run: ./scripts/build_native_windows.ps1
+        run: |
+          mkdir assets\native\windows\x64
+          ./scripts/build_native_windows.ps1
+
+      - name: Update pubspec.yaml Assets
+        run: |
+          $content = Get-Content pubspec.yaml -Raw
+          $newContent = $content -replace '(  assets:)', '$1
+    # Windows x64 binaries
+    - assets/native/windows/x64/hello_c.exe
+    - assets/native/windows/x64/hello_cpp.exe
+    - assets/native/windows/x64/hello_rust.exe
+    - assets/native/windows/x64/hello_go.exe'
+          $newContent | Set-Content pubspec.yaml
 
       - name: Build Flutter Windows App
         run: |
@@ -123,7 +156,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: windows-app-x64
-          path: build/windows/x64/runner/Release
+          path: build\windows\x64\runner\Release
 
   build-macos:
     runs-on: macos-latest
@@ -142,9 +175,19 @@ jobs:
 
       - name: Build Native macOS Binaries
         run: |
+          mkdir -p assets/native/macos/x64
           chmod +x ./scripts/build_native_macos.sh
           ./scripts/build_native_macos.sh x64
           chmod +x assets/native/macos/x64/*
+
+      - name: Update pubspec.yaml Assets
+        run: |
+          sed -i '' '/^  assets:/a \
+    # macOS x64 binaries\
+    - assets/native/macos/x64/hello_c\
+    - assets/native/macos/x64/hello_cpp\
+    - assets/native/macos/x64/hello_rust\
+    - assets/native/macos/x64/hello_go' pubspec.yaml
 
       - name: Build Flutter macOS App
         run: |
