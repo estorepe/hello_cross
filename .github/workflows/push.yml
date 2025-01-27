@@ -2,110 +2,157 @@ name: Flutter Cross-Platform Build
 on: [push, pull_request]
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
-          - os: ubuntu-24.04-arm
-            platform: linux
-            arch: arm64
-          - os: windows-latest
-            platform: windows
-            arch: x64
-          - os: macos-latest
-            platform: macos
-            arch: x64
-    runs-on: ${{ matrix.os }}
-    
+  build-linux-x64:
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup System Dependencies (Linux)
-      if: matrix.platform == 'linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          ninja-build \
-          libgtk-3-dev \
-          clang \
-          cmake \
-          gcc \
-          g++ \
-          libglu1-mesa \
-          libwayland-dev \
-          libxkbcommon-dev
-
-        # ARM64-specific requirements
-        if [ "${{ matrix.arch }}" = "arm64" ]; then
+      - name: Setup Linux Dependencies
+        run: |
+          sudo apt-get update
           sudo apt-get install -y \
+            ninja-build \
+            libgtk-3-dev \
+            clang \
+            cmake \
+            gcc \
+            g++ \
+            libglu1-mesa \
+            libwayland-dev \
+            libxkbcommon-dev
+
+      - name: Install Flutter
+        uses: cjlapao/setup-flutter-action@v0.1.6
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      - name: Build Native Linux Binaries
+        run: |
+          chmod +x ./scripts/build_native_linux.sh
+          ./scripts/build_native_linux.sh x64
+          chmod +x assets/native/linux/x64/*
+
+      - name: Build Flutter Linux App
+        run: |
+          flutter config --enable-linux-desktop
+          flutter clean
+          flutter pub get
+          flutter build linux --release --target-platform=linux-x64 --verbose
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-app-x64
+          path: build/linux/x64/release/bundle
+
+  build-linux-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup ARM64 Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build \
+            libgtk-3-dev \
+            clang \
+            cmake \
             gcc-aarch64-linux-gnu \
-            g++-aarch64-linux-gnu
-        fi
+            g++-aarch64-linux-gnu \
+            libglu1-mesa \
+            libwayland-dev \
+            libxkbcommon-dev
 
-    - name: Setup System Dependencies (macOS)
-      if: matrix.platform == 'macos'
-      run: |
-        brew install cmake ninja
+      - name: Install Flutter
+        uses: cjlapao/setup-flutter-action@v0.1.6
+        with:
+          channel: 'stable'
+          architecture: arm64
 
-    - name: Setup System Dependencies (Windows)
-      if: matrix.platform == 'windows'
-      run: |
-        choco install cmake ninja
+      - name: Build Native Linux ARM64 Binaries
+        run: |
+          chmod +x ./scripts/build_native_linux.sh
+          ./scripts/build_native_linux.sh arm64
+          chmod +x assets/native/linux/arm64/*
 
-    # Install Flutter with platform-specific actions
-    - name: Install Flutter (Linux/macOS)
-      if: matrix.platform != 'windows'
-      uses: cjlapao/setup-flutter-action@v0.1.6
-      with:
-        channel: 'stable'
-        architecture: ${{ matrix.arch }}
+      - name: Build Flutter Linux ARM64 App
+        run: |
+          flutter config --enable-linux-desktop
+          flutter clean
+          flutter pub get
+          flutter build linux --release --target-platform=linux-arm64 --verbose
 
-    - name: Install Flutter (Windows)
-      if: matrix.platform == 'windows'
-      uses: subosito/flutter-action@v2.13.0
-      with:
-        channel: 'stable'
-        architecture: ${{ matrix.arch }}
+      - name: Upload Linux ARM64 Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-app-arm64
+          path: build/linux/arm64/release/bundle
 
-    - name: Build Native Binaries
-      run: |
-        if [[ "${{ matrix.platform }}" == "windows" ]]; then
-          ./scripts/build_native_windows.ps1
-        else
-          chmod +x ./scripts/build_native_${{ matrix.platform }}.sh
-          ./scripts/build_native_${{ matrix.platform }}.sh ${{ matrix.arch }}
-        fi
-        
-        # Make binaries executable (not needed for Windows)
-        if [[ "${{ matrix.platform }}" != "windows" ]]; then
-          chmod +x assets/native/${{ matrix.platform }}/${{ matrix.arch }}/*
-        fi
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Build Flutter Application
-      run: |
-        flutter config --enable-${{ matrix.platform }}-desktop
-        flutter create --platforms=${{ matrix.platform }} .
-        flutter clean
-        flutter pub get
-        
-        # Platform-specific build commands
-        if [[ "${{ matrix.platform }}" == "linux" ]]; then
-          flutter build linux --release --target-platform=linux-${{ matrix.arch }} --verbose
-        elif [[ "${{ matrix.platform }}" == "windows" ]]; then
+      - name: Setup Windows Dependencies
+        run: choco install cmake ninja
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2.13.0
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      - name: Build Native Windows Binaries
+        run: ./scripts/build_native_windows.ps1
+
+      - name: Build Flutter Windows App
+        run: |
+          flutter config --enable-windows-desktop
+          flutter clean
+          flutter pub get
           flutter build windows --release
-        else
-          flutter build macos --release
-        fi
 
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ matrix.platform }}-app-${{ matrix.arch }}
-        path: |
-          ${{ matrix.platform == 'linux' && format('build/linux/{0}/release/bundle', matrix.arch) || '' }}
-          ${{ matrix.platform == 'windows' && 'build/windows/x64/runner/Release' || '' }}
-          ${{ matrix.platform == 'macos' && 'build/macos/Build/Products/Release' || '' }}
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-app-x64
+          path: build/windows/x64/runner/Release
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup macOS Dependencies
+        run: brew install cmake ninja
+
+      - name: Install Flutter
+        uses: cjlapao/setup-flutter-action@v0.1.6
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      - name: Build Native macOS Binaries
+        run: |
+          chmod +x ./scripts/build_native_macos.sh
+          ./scripts/build_native_macos.sh x64
+          chmod +x assets/native/macos/x64/*
+
+      - name: Build Flutter macOS App
+        run: |
+          flutter config --enable-macos-desktop
+          flutter clean
+          flutter pub get
+          flutter build macos --release
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-app-x64
+          path: build/macos/Build/Products/Release
