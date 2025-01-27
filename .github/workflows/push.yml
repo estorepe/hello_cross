@@ -1,50 +1,81 @@
-name: Linux ARM64 Build
+name: Flutter Linux Build (x64 + ARM64)
 on: [push, pull_request]
 
 jobs:
-  build_arm64:
-    runs-on: ubuntu-24.04-arm
+  build:
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    runs-on: ${{ contains(matrix.arch, 'arm64') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Dependencies
+    - name: Setup System Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          git curl ninja-build \
-          libgtk-3-dev clang cmake \
-          gcc g++ libglu1-mesa build-essential
-        
-        # Install Go
-        sudo snap install go --classic
-        
-        # Install Rust
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          ninja-build \
+          libgtk-3-dev \
+          clang \
+          cmake \
+          gcc \
+          g++ \
+          libglu1-mesa \
+          libwayland-dev \
+          libxkbcommon-dev
 
-    - name: Install Flutter (ARM64)
+        # ARM64-specific requirements
+        if [ "${{ matrix.arch }}" = "arm64" ]; then
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu
+        fi
+
+    - name: Install Flutter
+      uses: cjlapao/setup-flutter@v1
+      with:
+        channel: 'stable'
+        architecture: ${{ matrix.arch }}
+      # Fallback for ARM64 if action doesn't support it :cite[10]
+      continue-on-error: ${{ matrix.arch == 'arm64' }}
+
+    - name: Manual Flutter Setup (ARM64)
+      if: matrix.arch == 'arm64' && steps.Install-Flutter.outcome == 'failure'
       run: |
-        git clone https://github.com/flutter/flutter.git -b stable --depth 1
-        echo "export PATH=\$PATH:\$PWD/flutter/bin" >> $GITHUB_ENV
-        source $HOME/.bashrc
+        git clone -b stable https://github.com/flutter/flutter.git
+        echo "$GITHUB_WORKSPACE/flutter/bin" >> $GITHUB_PATH
         flutter doctor -v
 
     - name: Build Native Binaries
       run: |
-        ./scripts/build_native.sh arm64
+        # Cross-compilation setup for ARM64 :cite[5]:cite[8]
+        if [ "${{ matrix.arch }}" = "arm64" ]; then
+          export CC=aarch64-linux-gnu-gcc
+          export CXX=aarch64-linux-gnu-g++
+        fi
+        
+        ./scripts/build_native.sh ${{ matrix.arch }}
         chmod +x assets/native/linux/*
 
-    - name: Build Flutter App
+    - name: Build Flutter Application
       run: |
-        source ~/.bashrc
         flutter config --enable-linux-desktop
         flutter clean
         flutter pub get
-        flutter build linux --release --target-platform=linux-arm64
+        
+        # ARM64 requires explicit platform specification :cite[2]
+        flutter build linux --release \
+          --target-platform=linux-${{ matrix.arch }} \
+          --verbose
+
+    - name: Verify Bundle
+      run: |
+        file build/linux/${{ matrix.arch }}/release/bundle/your_app_name
+        ldd build/linux/${{ matrix.arch }}/release/bundle/your_app_name
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: linux-arm64-app
-        path: build/linux/arm64/release/bundle
+        name: linux-app-${{ matrix.arch }}
+        path: build/linux/${{ matrix.arch }}/release/bundle
