@@ -18,4 +18,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/native/linux/  # Include native binaries as assets
+    - assets/native/linux/hello_c
+    - assets/native/linux/hello_cpp
+    - assets/native/linux/hello_rust
+    - assets/native/linux/hello_go  # Include native binaries as assets
