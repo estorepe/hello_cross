@@ -63,7 +63,7 @@ jobs:
         architecture: ${{ matrix.arch }}
 
     - name: Build Native Binaries
-      shell: ${{ (matrix.platform == 'windows') && 'pwsh' || 'bash' }}
+      shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
       run: |
         if [[ "${{ matrix.platform }}" == "windows" ]]; then
           ./scripts/build_native_windows.ps1
