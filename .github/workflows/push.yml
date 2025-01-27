@@ -63,19 +63,19 @@ jobs:
         architecture: ${{ matrix.arch }}
 
     - name: Build Native Binaries
-      shell: ${{ matrix.platform == 'windows' && 'pwsh' || 'bash' }}
+      shell: ${{ (matrix.platform == 'windows') && 'pwsh' || 'bash' }}
       run: |
-        if ( "${{ matrix.platform }}" -eq "windows" ) {
+        if [[ "${{ matrix.platform }}" == "windows" ]]; then
           ./scripts/build_native_windows.ps1
-        } else {
+        else
           chmod +x ./scripts/build_native_${{ matrix.platform }}.sh
           ./scripts/build_native_${{ matrix.platform }}.sh ${{ matrix.arch }}
-        }
+        fi
         
         # Make binaries executable (not needed for Windows)
-        if ("${{ matrix.platform }}" -ne "windows") {
+        if [[ "${{ matrix.platform }}" != "windows" ]]; then
           chmod +x assets/native/${{ matrix.platform }}/${{ matrix.arch }}/*
-        }
+        fi
 
     - name: Build Flutter Application
       run: |
@@ -85,9 +85,9 @@ jobs:
         flutter pub get
         
         # Platform-specific build commands
-        if [ "${{ matrix.platform }}" = "linux" ]; then
+        if [[ "${{ matrix.platform }}" == "linux" ]]; then
           flutter build linux --release --target-platform=linux-${{ matrix.arch }} --verbose
-        elif [ "$matrix.platform" = "windows" ]; then
+        elif [[ "${{ matrix.platform }}" == "windows" ]]; then
           flutter build windows --release
         else
           flutter build macos --release
