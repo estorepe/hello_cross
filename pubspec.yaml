@@ -1,24 +1,26 @@
-name: flutter_hello_world
-description: "A Flutter app that runs native binaries"
-version: 1.0.0+1
-
-environment:
-  sdk: ">=2.19.0 <4.0.0"  # Add this SDK constraint
-  flutter: ">=3.7.0"       # Add Flutter constraint
-
-dependencies:
-  flutter:
-    sdk: flutter
-  path_provider: ^2.1.0    # For accessing app directories
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-
 flutter:
   uses-material-design: true
   assets:
-    - assets/native/linux/hello_c
-    - assets/native/linux/hello_cpp
-    - assets/native/linux/hello_rust
-    - assets/native/linux/hello_go  # Include native binaries as assets
+    # Linux x64 binaries
+    - assets/native/linux/x64/hello_c
+    - assets/native/linux/x64/hello_cpp
+    - assets/native/linux/x64/hello_rust
+    - assets/native/linux/x64/hello_go
+    
+    # Linux ARM64 binaries
+    - assets/native/linux/arm64/hello_c
+    - assets/native/linux/arm64/hello_cpp
+    - assets/native/linux/arm64/hello_rust
+    - assets/native/linux/arm64/hello_go
+    
+    # Windows x64 binaries
+    - assets/native/windows/x64/hello_c.exe
+    - assets/native/windows/x64/hello_cpp.exe
+    - assets/native/windows/x64/hello_rust.exe
+    - assets/native/windows/x64/hello_go.exe
+    
+    # macOS x64 binaries
+    - assets/native/macos/x64/hello_c
+    - assets/native/macos/x64/hello_cpp
+    - assets/native/macos/x64/hello_rust
+    - assets/native/macos/x64/hello_go

@@ -1,17 +1,31 @@
-name: Flutter Linux Build (x64 + ARM64)
+name: Flutter Cross-Platform Build
 on: [push, pull_request]
 
 jobs:
   build:
     strategy:
       matrix:
-        arch: [x64, arm64]
-    runs-on: ${{ contains(matrix.arch, 'arm64') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+          - os: windows-latest
+            platform: windows
+            arch: x64
+          - os: macos-latest
+            platform: macos
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup System Dependencies
+    - name: Setup System Dependencies (Linux)
+      if: matrix.platform == 'linux'
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -32,52 +46,58 @@ jobs:
             g++-aarch64-linux-gnu
         fi
 
+    - name: Setup System Dependencies (macOS)
+      if: matrix.platform == 'macos'
+      run: |
+        brew install cmake ninja
+
+    - name: Setup System Dependencies (Windows)
+      if: matrix.platform == 'windows'
+      run: |
+        choco install cmake ninja
+
     - name: Install Flutter
       uses: cjlapao/setup-flutter-action@v0.1.6
       with:
         channel: 'stable'
         architecture: ${{ matrix.arch }}
-      # Fallback for ARM64 if action doesn't support it :cite[10]
-      continue-on-error: ${{ matrix.arch == 'arm64' }}
-
-    - name: Manual Flutter Setup (ARM64)
-      if: matrix.arch == 'arm64' && steps.Install-Flutter.outcome == 'failure'
-      run: |
-        git clone -b stable https://github.com/flutter/flutter.git
-        echo "$GITHUB_WORKSPACE/flutter/bin" >> $GITHUB_PATH
-        flutter doctor -v
 
     - name: Build Native Binaries
+      shell: ${{ matrix.platform == 'windows' && 'pwsh' || 'bash' }}
       run: |
-        # Cross-compilation setup for ARM64 :cite[5]:cite[8]
-        if [ "${{ matrix.arch }}" = "arm64" ]; then
-          export CC=aarch64-linux-gnu-gcc
-          export CXX=aarch64-linux-gnu-g++
-        fi
-        chmod +x ./scripts/*
+        if ( "${{ matrix.platform }}" -eq "windows" ) {
+          ./scripts/build_native_windows.ps1
+        } else {
+          chmod +x ./scripts/build_native_${{ matrix.platform }}.sh
+          ./scripts/build_native_${{ matrix.platform }}.sh ${{ matrix.arch }}
+        }
         
-        ./scripts/build_native.sh ${{ matrix.arch }}
-        chmod +x assets/native/linux/*
+        # Make binaries executable (not needed for Windows)
+        if ("${{ matrix.platform }}" -ne "windows") {
+          chmod +x assets/native/${{ matrix.platform }}/${{ matrix.arch }}/*
+        }
 
     - name: Build Flutter Application
       run: |
-        flutter config --enable-linux-desktop
-        flutter create --platforms=linux .
+        flutter config --enable-${{ matrix.platform }}-desktop
+        flutter create --platforms=${{ matrix.platform }} .
         flutter clean
         flutter pub get
         
-        # ARM64 requires explicit platform specification :cite[2]
-        flutter build linux --release \
-          --target-platform=linux-${{ matrix.arch }} \
-          --verbose
-
-    - name: Verify Bundle
-      run: |
-        file build/linux/${{ matrix.arch }}/release/bundle/flutter_hello_world
-        ldd build/linux/${{ matrix.arch }}/release/bundle/flutter_hello_world
+        # Platform-specific build commands
+        if [ "${{ matrix.platform }}" = "linux" ]; then
+          flutter build linux --release --target-platform=linux-${{ matrix.arch }} --verbose
+        elif [ "$matrix.platform" = "windows" ]; then
+          flutter build windows --release
+        else
+          flutter build macos --release
+        fi
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: linux-app-${{ matrix.arch }}
-        path: build/linux/${{ matrix.arch }}/release/bundle
+        name: ${{ matrix.platform }}-app-${{ matrix.arch }}
+        path: |
+          ${{ matrix.platform == 'linux' && format('build/linux/{0}/release/bundle', matrix.arch) || '' }}
+          ${{ matrix.platform == 'windows' && 'build/windows/x64/runner/Release' || '' }}
+          ${{ matrix.platform == 'macos' && 'build/macos/Build/Products/Release' || '' }}
