@@ -37,12 +37,17 @@ jobs:
 
       - name: Update pubspec.yaml Assets
         run: |
-          sed -i '/^  assets:/a \
-    # Linux x64 binaries\
-    - assets/native/linux/x64/hello_c\
-    - assets/native/linux/x64/hello_cpp\
-    - assets/native/linux/x64/hello_rust\
-    - assets/native/linux/x64/hello_go' pubspec.yaml
+          line_number=$(grep -n '^  assets:' pubspec.yaml | cut -d: -f1)
+          tmp_file=$(mktemp)
+          head -n $line_number pubspec.yaml > "$tmp_file"
+          echo '    # Linux x64 binaries' >> "$tmp_file"
+          echo '    - assets/native/linux/x64/hello_c' >> "$tmp_file"
+          echo '    - assets/native/linux/x64/hello_cpp' >> "$tmp_file"
+          echo '    - assets/native/linux/x64/hello_rust' >> "$tmp_file"
+          echo '    - assets/native/linux/x64/hello_go' >> "$tmp_file"
+          tail -n +$((line_number + 1)) pubspec.yaml >> "$tmp_file"
+          mv "$tmp_file" pubspec.yaml
+
 
       - name: Build Flutter Linux App
         run: |
@@ -93,12 +98,16 @@ jobs:
 
       - name: Update pubspec.yaml Assets
         run: |
-          sed -i '/^  assets:/a \
-    # Linux ARM64 binaries\
-    - assets/native/linux/arm64/hello_c\
-    - assets/native/linux/arm64/hello_cpp\
-    - assets/native/linux/arm64/hello_rust\
-    - assets/native/linux/arm64/hello_go' pubspec.yaml
+          line_number=$(grep -n '^  assets:' pubspec.yaml | cut -d: -f1)
+          tmp_file=$(mktemp)
+          head -n $line_number pubspec.yaml > "$tmp_file"
+          echo '    # Linux ARM64 binaries' >> "$tmp_file"
+          echo '    - assets/native/linux/arm64/hello_c' >> "$tmp_file"
+          echo '    - assets/native/linux/arm64/hello_cpp' >> "$tmp_file"
+          echo '    - assets/native/linux/arm64/hello_rust' >> "$tmp_file"
+          echo '    - assets/native/linux/arm64/hello_go' >> "$tmp_file"
+          tail -n +$((line_number + 1)) pubspec.yaml >> "$tmp_file"
+          mv "$tmp_file" pubspec.yaml
 
       - name: Build Flutter Linux ARM64 App
         run: |
@@ -136,14 +145,20 @@ jobs:
 
       - name: Update pubspec.yaml Assets
         run: |
-          $content = Get-Content pubspec.yaml -Raw
-          $newContent = $content -replace '(  assets:)', '$1
-    # Windows x64 binaries
-    - assets/native/windows/x64/hello_c.exe
-    - assets/native/windows/x64/hello_cpp.exe
-    - assets/native/windows/x64/hello_rust.exe
-    - assets/native/windows/x64/hello_go.exe'
-          $newContent | Set-Content pubspec.yaml
+          $file = 'pubspec.yaml'
+          $lines = Get-Content $file
+          $insertIndex = $lines.IndexOf('  assets:') + 1
+          $newLines = @(
+              $lines[0..($insertIndex-1)]
+              '    # Windows x64 binaries'
+              '    - assets/native/windows/x64/hello_c.exe'
+              '    - assets/native/windows/x64/hello_cpp.exe'
+              '    - assets/native/windows/x64/hello_rust.exe'
+              '    - assets/native/windows/x64/hello_go.exe'
+              $lines[$insertIndex..$lines.Count]
+          )
+          $newLines | Set-Content $file
+
 
       - name: Build Flutter Windows App
         run: |
@@ -182,12 +197,18 @@ jobs:
 
       - name: Update pubspec.yaml Assets
         run: |
-          sed -i '' '/^  assets:/a \
-    # macOS x64 binaries\
-    - assets/native/macos/x64/hello_c\
-    - assets/native/macos/x64/hello_cpp\
-    - assets/native/macos/x64/hello_rust\
-    - assets/native/macos/x64/hello_go' pubspec.yaml
+          line_number=$(grep -n '^  assets:' pubspec.yaml | cut -d: -f1)
+          tmp_file=$(mktemp)
+          head -n $line_number pubspec.yaml > "$tmp_file"
+          echo '    # macOS x64 binaries' >> "$tmp_file"
+          echo '    - assets/native/macos/x64/hello_c' >> "$tmp_file"
+          echo '    - assets/native/macos/x64/hello_cpp' >> "$tmp_file"
+          echo '    - assets/native/macos/x64/hello_rust' >> "$tmp_file"
+          echo '    - assets/native/macos/x64/hello_go' >> "$tmp_file"
+          tail -n +$((line_number + 1)) pubspec.yaml >> "$tmp_file"
+          mv "$tmp_file" pubspec.yaml
+
+
 
       - name: Build Flutter macOS App
         run: |
