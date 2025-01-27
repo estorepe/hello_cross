@@ -33,7 +33,7 @@ jobs:
         fi
 
     - name: Install Flutter
-      uses: cjlapao/setup-flutter@v1
+      uses: cjlapao/setup-flutter-action@v0.1.6
       with:
         channel: 'stable'
         architecture: ${{ matrix.arch }}
