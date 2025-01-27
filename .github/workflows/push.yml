@@ -188,6 +188,11 @@ jobs:
           channel: 'stable'
           architecture: x64
 
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
       - name: Build Native macOS Binaries
         run: |
           mkdir -p assets/native/macos/x64
