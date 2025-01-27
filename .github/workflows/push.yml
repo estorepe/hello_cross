@@ -56,8 +56,17 @@ jobs:
       run: |
         choco install cmake ninja
 
-    - name: Install Flutter
+    # Install Flutter with platform-specific actions
+    - name: Install Flutter (Linux/macOS)
+      if: matrix.platform != 'windows'
       uses: cjlapao/setup-flutter-action@v0.1.6
+      with:
+        channel: 'stable'
+        architecture: ${{ matrix.arch }}
+
+    - name: Install Flutter (Windows)
+      if: matrix.platform == 'windows'
+      uses: subosito/flutter-action@v2.13.0
       with:
         channel: 'stable'
         architecture: ${{ matrix.arch }}
