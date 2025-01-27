@@ -1,3 +1,20 @@
+name: flutter_hello_world
+description: "A Flutter app that runs native binaries"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.19.0 <4.0.0"  # Add this SDK constraint
+  flutter: ">=3.7.0"       # Add Flutter constraint
+
+dependencies:
+  flutter:
+    sdk: flutter
+  path_provider: ^2.1.0    # For accessing app directories
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+    
 flutter:
   uses-material-design: true
   assets:
