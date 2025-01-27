@@ -73,8 +73,8 @@ jobs:
 
     - name: Verify Bundle
       run: |
-        file build/linux/${{ matrix.arch }}/release/bundle/your_app_name
-        ldd build/linux/${{ matrix.arch }}/release/bundle/your_app_name
+        file build/linux/${{ matrix.arch }}/release/bundle/flutter_hello_world
+        ldd build/linux/${{ matrix.arch }}/release/bundle/flutter_hello_world
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
