@@ -62,6 +62,7 @@ jobs:
     - name: Build Flutter Application
       run: |
         flutter config --enable-linux-desktop
+        flutter create --platforms=linux .
         flutter clean
         flutter pub get
         
