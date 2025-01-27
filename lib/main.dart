@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io'; // For Directory, File, and Process
+import 'dart:io';
 
 void main() {
   runApp(const MyApp());
@@ -40,8 +40,9 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
 
   Future<String> runBinary(String name) async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final binDir = Directory(join(dir.path, 'bin'));
+      // Use system temp directory (works without app ID configuration)
+      final tempDir = Directory.systemTemp;
+      final binDir = Directory(join(tempDir.path, 'flutter_bin'));
 
       if (!await binDir.exists()) {
         await binDir.create(recursive: true);
@@ -49,18 +50,27 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
 
       final executable = File(join(binDir.path, name));
 
+      // Debugging output
+      debugPrint('Binary path: ${executable.path}');
+
       if (!await executable.exists()) {
+        // Load from bundled assets
         final byteData = await rootBundle.load('assets/native/linux/$name');
-        await executable.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
+        await executable.writeAsBytes(
+          byteData.buffer.asUint8List(),
+          flush: true,
+        );
+        debugPrint('Copied binary to temp directory');
       }
 
-      // Ensure the binary is executable
+      // Set execute permissions
       await Process.run('chmod', ['+x', executable.path]);
 
+      // Execute and return output
       final result = await Process.run(executable.path, []);
-      return result.stdout;
+      return result.stdout.toString().trim();
     } catch (e) {
-      return 'Error: $e';
+      return 'Error: ${e.toString()}';
     }
   }
 
@@ -73,14 +83,31 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
       body: ListView.builder(
         itemCount: binaries.length,
         itemBuilder: (context, index) {
-          return FutureBuilder<String>(
-            future: runBinary(binaries[index]),
-            builder: (context, snapshot) {
-              return ListTile(
-                title: Text(binaries[index]),
-                subtitle: Text(snapshot.data ?? 'Loading...'),
-              );
-            },
+          final binaryName = binaries[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: FutureBuilder<String>(
+              future: runBinary(binaryName),
+              builder: (context, snapshot) {
+                final content = snapshot.hasData
+                    ? snapshot.data!
+                    : snapshot.hasError
+                        ? 'Error: ${snapshot.error}'
+                        : 'Loading...';
+                
+                return ListTile(
+                  title: Text(
+                    binaryName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(content),
+                  leading: const Icon(Icons.terminal),
+                  trailing: snapshot.connectionState == ConnectionState.waiting
+                      ? const CircularProgressIndicator()
+                      : null,
+                );
+              },
+            ),
           );
         },
       ),
