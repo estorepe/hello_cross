@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   path_provider: ^2.1.0    # For accessing app directories
+  flutter_animate: ^4.2.0
+  iconsax: ^1.0.0
 
 dev_dependencies:
   flutter_test:
