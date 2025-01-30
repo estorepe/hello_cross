@@ -21,6 +21,23 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6F42C1),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        cardTheme: CardTheme(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(4),
+        ),
       ),
       home: const BinaryRunnerScreen(),
     );
@@ -35,7 +52,12 @@ class BinaryRunnerScreen extends StatefulWidget {
 }
 
 class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
-  final binaries = ['hello_c', 'hello_cpp', 'hello_rust', 'hello_go'];
+  final binaries = [
+    'hello_c',
+    'hello_cpp',
+    'hello_rust',
+    'hello_go',
+  ];
 
   String get platformDir {
     if (Platform.isWindows) return 'windows';
@@ -52,7 +74,8 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
   }
 
   String getBinaryName(String base) {
-    return Platform.isWindows ? '$base.exe' : base;
+    if (Platform.isWindows) return '$base.exe';
+    return base;
   }
 
   Future<String> runBinary(String name) async {
@@ -76,7 +99,8 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
         await Process.run('chmod', ['+x', executable.path]);
       }
 
-      final result = await Process.run(executable.path, [], runInShell: Platform.isWindows);
+      final result = await Process.run(executable.path, [],
+          runInShell: Platform.isWindows);
 
       if (result.exitCode != 0) {
         throw Exception('Execution failed: ${result.stderr}');
@@ -95,6 +119,14 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
       appBar: AppBar(
         title: const Text('Native Binary Runner'),
         centerTitle: true,
+        elevation: 2,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: 'About',
+            onPressed: () {},
+          ),
+        ],
       ),
       body: FutureBuilder<String>(
         future: archDir,
@@ -112,16 +144,19 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
               _buildSystemInfo(context, snapshot.data!),
               Expanded(
                 child: GridView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(8),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.7,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 1.1,
                   ),
                   itemCount: binaries.length,
                   itemBuilder: (context, index) =>
-                      _BinaryCard(name: binaries[index], onRun: runBinary),
+                      _BinaryCard(
+                        name: binaries[index],
+                        onRun: runBinary,
+                      ),
                 ),
               ),
             ],
@@ -133,17 +168,32 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
 
   Widget _buildSystemInfo(BuildContext context, String arch) {
     return Container(
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _InfoItem(icon: Icons.computer, label: 'Platform', value: platformDir.toUpperCase()),
-          _InfoItem(icon: Icons.architecture, label: 'Architecture', value: arch.toUpperCase()),
+          _InfoItem(
+            icon: Icons.computer,
+            label: 'Platform',
+            value: platformDir.toUpperCase(),
+          ),
+          _InfoItem(
+            icon: Icons.architecture,
+            label: 'Architecture',
+            value: arch.toUpperCase(),
+          ),
         ],
       ),
     );
@@ -184,34 +234,82 @@ class _BinaryCardState extends State<_BinaryCard> {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  widget.name,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                Icon(
+                  Icons.terminal,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
-                _isRunning
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : IconButton(
-                        icon: const Icon(Icons.play_arrow, size: 20),
-                        onPressed: _isRunning ? null : _executeBinary,
-                      ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.name,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
               ],
             ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: _isRunning
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.play_arrow, size: 16),
+                label: Text(
+                  _isRunning ? 'Running...' : 'Run',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                onPressed: _isRunning ? null : _executeBinary,
+              ),
+            ),
             if (_output.isNotEmpty) ...[
-              const Divider(),
-              Text(
-                _output,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                      color: _output.startsWith('Error:') ? Colors.redAccent : Colors.greenAccent,
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _output,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                              color: _output.startsWith('Error:')
+                                  ? Colors.redAccent
+                                  : Colors.greenAccent,
+                            ),
+                      ),
                     ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 14),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Copy output',
+                      onPressed: () =>
+                          Clipboard.setData(ClipboardData(text: _output)),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
@@ -226,16 +324,36 @@ class _InfoItem extends StatelessWidget {
   final String label;
   final String value;
 
-  const _InfoItem({required this.icon, required this.label, required this.value});
+  const _InfoItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 28, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(height: 4),
-        Text(label, style: Theme.of(context).textTheme.labelSmall),
-        Text(value, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+        Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+          ],
+        ),
       ],
     );
   }
