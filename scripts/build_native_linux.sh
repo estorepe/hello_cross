@@ -26,7 +26,6 @@ target = "aarch64-unknown-linux-gnu"
 [target.aarch64-unknown-linux-gnu]
 linker = "aarch64-linux-gnu-gcc"
 rustflags = [
-    "-C", "link-arg=-mlinker-version=lld",
     "-C", "target-feature=+crt-static"
 ]
 EOF
