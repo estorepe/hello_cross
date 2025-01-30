@@ -25,18 +25,11 @@ class MyApp extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF6F42C1),
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-        ),
-        cardTheme: CardTheme(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(4),
         ),
       ),
       home: const BinaryRunnerScreen(),
@@ -113,46 +106,15 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
     }
   }
 
-  void _showInfoDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('About Native Binary Runner'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('This app demonstrates running native binaries from different languages:'),
-            SizedBox(height: 8),
-            Text('• C Binary: Simple Hello World'),
-            Text('• C++ Binary: Basic console output'),
-            Text('• Rust Binary: Command line program'),
-            Text('• Go Binary: Terminal application'),
-            SizedBox(height: 8),
-            Text('Each binary is compiled for your specific platform and architecture.'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Native Binary Runner'),
         centerTitle: true,
-        elevation: 2,
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
-            tooltip: 'Show information about the binaries',
             onPressed: _showInfoDialog,
           ),
         ],
@@ -170,22 +132,15 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
 
           return Column(
             children: [
-              _buildSystemInfo(context, snapshot.data!),
+              _buildPlatformInfo(snapshot.data!),
               Expanded(
-                child: GridView.builder(
+                child: ListView.builder(
                   padding: const EdgeInsets.all(8),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 1.1,
-                  ),
                   itemCount: binaries.length,
-                  itemBuilder: (context, index) =>
-                      _BinaryCard(
-                        name: binaries[index],
-                        onRun: runBinary,
-                      ),
+                  itemBuilder: (context, index) => _BinaryListItem(
+                    name: binaries[index],
+                    onRun: runBinary,
+                  ),
                 ),
               ),
             ],
@@ -195,33 +150,38 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
     );
   }
 
-  Widget _buildSystemInfo(BuildContext context, String arch) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+  Widget _buildPlatformInfo(String arch) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Platform: ${platformDir.toUpperCase()}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          Text(
+            'Architecture: ${arch.toUpperCase()}',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _InfoItem(
-            icon: Icons.computer,
-            label: 'Platform',
-            value: platformDir.toUpperCase(),
-          ),
-          _InfoItem(
-            icon: Icons.architecture,
-            label: 'Architecture',
-            value: arch.toUpperCase(),
+    );
+  }
+
+  void _showInfoDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('About'),
+        content: const Text(
+          'Runs pre-compiled native binaries from different programming languages.\n\n'
+          'Binaries are executed in a temporary directory with appropriate permissions.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -229,17 +189,17 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
   }
 }
 
-class _BinaryCard extends StatefulWidget {
+class _BinaryListItem extends StatefulWidget {
   final String name;
   final Future<String> Function(String) onRun;
 
-  const _BinaryCard({required this.name, required this.onRun});
+  const _BinaryListItem({required this.name, required this.onRun});
 
   @override
-  State<_BinaryCard> createState() => _BinaryCardState();
+  State<_BinaryListItem> createState() => _BinaryListItemState();
 }
 
-class _BinaryCardState extends State<_BinaryCard> {
+class _BinaryListItemState extends State<_BinaryListItem> {
   String _output = '';
   bool _isRunning = false;
 
@@ -262,20 +222,14 @@ class _BinaryCardState extends State<_BinaryCard> {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.terminal,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     widget.name,
@@ -284,112 +238,57 @@ class _BinaryCardState extends State<_BinaryCard> {
                         ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            SizedBox(
-              width: double.infinity,
-              height: 32,
-              child: ElevatedButton.icon(
-                icon: _isRunning
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.play_arrow, size: 16),
-                label: Text(
-                  _isRunning ? 'Running...' : 'Run',
-                  style: const TextStyle(fontSize: 13),
+                const SizedBox(width: 12),
+                SizedBox(
+                  height: 32,
+                  child: ElevatedButton(
+                    onPressed: _isRunning ? null : _executeBinary,
+                    child: _isRunning
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Run'),
+                  ),
                 ),
-                onPressed: _isRunning ? null : _executeBinary,
-              ),
+              ],
             ),
             if (_output.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _output,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontFamily: 'monospace',
-                                fontSize: 11,
-                                color: _output.startsWith('Error:')
-                                    ? Colors.redAccent
-                                    : Colors.greenAccent,
-                              ),
-                        ),
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _output,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                              color: _output.startsWith('Error:')
+                                  ? Colors.redAccent
+                                  : Colors.greenAccent,
+                            ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.copy, size: 14),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 20,
-                          minHeight: 20,
-                        ),
-                        tooltip: 'Copy output',
-                        onPressed: () =>
-                            Clipboard.setData(ClipboardData(text: _output)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 16),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
                       ),
-                    ],
-                  ),
+                      onPressed: () =>
+                          Clipboard.setData(ClipboardData(text: _output)),
+                    ),
+                  ],
                 ),
               ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _InfoItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }
