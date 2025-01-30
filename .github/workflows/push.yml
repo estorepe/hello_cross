@@ -58,7 +58,7 @@ jobs:
           flutter build linux --release --target-platform=linux-x64 --verbose
 
       - name: Upload Linux Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: linux-app-x64
           path: build/linux/x64/release/bundle
@@ -125,7 +125,7 @@ jobs:
           flutter build linux --release --target-platform=linux-arm64 --verbose
 
       - name: Upload Linux ARM64 Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: linux-app-arm64
           path: build/linux/arm64/release/bundle
@@ -175,7 +175,7 @@ jobs:
           flutter build windows --release
 
       - name: Upload Windows Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-app-x64
           path: build\windows\x64\runner\Release
@@ -230,7 +230,7 @@ jobs:
           flutter build macos --release
 
       - name: Upload macOS Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-app-x64
           path: build/macos/Build/Products/Release
