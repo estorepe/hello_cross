@@ -15,9 +15,29 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Native Binary Runner',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+      theme: ThemeData.dark().copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6F42C1),
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6F42C1),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        cardTheme: CardTheme(
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.all(8),
+        ),
       ),
       home: const BinaryRunnerScreen(),
     );
@@ -39,7 +59,6 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
     'hello_go',
   ];
 
-  // Platform and architecture detection
   String get platformDir {
     if (Platform.isWindows) return 'windows';
     if (Platform.isMacOS) return 'macos';
@@ -51,7 +70,6 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
       final result = await Process.run('uname', ['-m']);
       return result.stdout.toString().trim() == 'aarch64' ? 'arm64' : 'x64';
     }
-    // Windows and macOS are x64 only in our configuration
     return 'x64';
   }
 
@@ -66,7 +84,6 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
       final tempDir = await getTemporaryDirectory();
       final binDir = Directory(path.join(tempDir.path, 'flutter_bin'));
 
-      // Create binary directory if it doesn't exist
       if (!await binDir.exists()) {
         await binDir.create(recursive: true);
       }
@@ -75,41 +92,18 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
       final executable = File(path.join(binDir.path, binaryName));
       final assetPath = 'assets/native/$platformDir/$arch/$binaryName';
 
-      debugPrint('Platform: $platformDir');
-      debugPrint('Architecture: $arch');
-      debugPrint('Binary name: $binaryName');
-      debugPrint('Asset path: $assetPath');
-      debugPrint('Executable path: ${executable.path}');
+      final byteData = await rootBundle.load(assetPath);
+      await executable.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
 
-      // Copy binary from assets if it doesn't exist or is outdated
-      try {
-        final byteData = await rootBundle.load(assetPath);
-        await executable.writeAsBytes(
-          byteData.buffer.asUint8List(),
-          flush: true,
-        );
-        debugPrint('Binary copied successfully');
-
-        // Set execute permissions on Unix-like systems
-        if (!Platform.isWindows) {
-          final result = await Process.run('chmod', ['+x', executable.path]);
-          if (result.exitCode != 0) {
-            throw Exception('Failed to set execute permissions: ${result.stderr}');
-          }
-        }
-      } catch (e) {
-        throw Exception('Failed to copy binary: $e');
+      if (!Platform.isWindows) {
+        await Process.run('chmod', ['+x', executable.path]);
       }
 
-      // Run the binary
-      final result = await Process.run(
-        executable.path,
-        [],
-        runInShell: Platform.isWindows,
-      );
+      final result = await Process.run(executable.path, [],
+          runInShell: Platform.isWindows);
 
       if (result.exitCode != 0) {
-        throw Exception('Binary execution failed: ${result.stderr}');
+        throw Exception('Execution failed: ${result.stderr}');
       }
 
       return result.stdout.toString().trim();
@@ -124,15 +118,20 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Native Binary Runner'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        centerTitle: true,
+        elevation: 4,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {},
+          ),
+        ],
       ),
       body: FutureBuilder<String>(
         future: archDir,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Error detecting architecture: ${snapshot.error}'),
-            );
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           if (!snapshot.hasData) {
@@ -141,75 +140,202 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
 
           return Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Text(
-                          'System Information',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 8),
-                        Text('Platform: $platformDir'),
-                        Text('Architecture: ${snapshot.data}'),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              _buildSystemInfo(context, snapshot.data!),
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.4,
+                  ),
                   itemCount: binaries.length,
-                  itemBuilder: (context, index) {
-                    final binaryName = binaries[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16.0),
-                      child: FutureBuilder<String>(
-                        future: runBinary(binaryName),
-                        builder: (context, snapshot) {
-                          final content = snapshot.hasData
-                              ? snapshot.data!
-                              : snapshot.hasError
-                                  ? 'Error: ${snapshot.error}'
-                                  : 'Loading...';
-
-                          return ListTile(
-                            title: Text(
-                              binaryName,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(content),
-                            leading: Icon(
-                              snapshot.hasError
-                                  ? Icons.error_outline
-                                  : Icons.terminal,
-                              color: snapshot.hasError ? Colors.red : null,
-                            ),
-                            trailing: snapshot.connectionState ==
-                                    ConnectionState.waiting
-                                ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : null,
-                          );
-                        },
+                  itemBuilder: (context, index) =>
+                      _BinaryCard(
+                        name: binaries[index],
+                        onRun: runBinary,
                       ),
-                    );
-                  },
                 ),
               ),
             ],
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSystemInfo(BuildContext context, String arch) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _InfoItem(
+            icon: Icons.computer,
+            label: 'Platform',
+            value: platformDir.toUpperCase(),
+          ),
+          _InfoItem(
+            icon: Icons.architecture,
+            label: 'Architecture',
+            value: arch.toUpperCase(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BinaryCard extends StatefulWidget {
+  final String name;
+  final Future<String> Function(String) onRun;
+
+  const _BinaryCard({required this.name, required this.onRun});
+
+  @override
+  State<_BinaryCard> createState() => _BinaryCardState();
+}
+
+class _BinaryCardState extends State<_BinaryCard> {
+  String _output = '';
+  bool _isRunning = false;
+
+  Future<void> _executeBinary() async {
+    setState(() {
+      _isRunning = true;
+      _output = '';
+    });
+
+    try {
+      final result = await widget.onRun(widget.name);
+      setState(() => _output = result);
+    } catch (e) {
+      setState(() => _output = 'Error: ${e.toString()}');
+    } finally {
+      setState(() => _isRunning = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.terminal,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  widget.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: _isRunning
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.play_arrow, size: 20),
+                label: Text(_isRunning ? 'Running...' : 'Run Binary'),
+                onPressed: _isRunning ? null : _executeBinary,
+              ),
+            ),
+            if (_output.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _output,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                              color: _output.startsWith('Error:')
+                                  ? Colors.redAccent
+                                  : Colors.greenAccent,
+                            ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 18),
+                      onPressed: () =>
+                          Clipboard.setData(ClipboardData(text: _output)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _InfoItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        ),
+      ],
     );
   }
 }
