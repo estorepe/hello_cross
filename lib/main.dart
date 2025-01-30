@@ -111,16 +111,19 @@ class _BinaryRunnerScreenState extends State<BinaryRunnerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Native Code Runner'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.info_circle),
-            onPressed: _showInfoDialog,
-          ).animate().shake(delay: 1000.ms),
-        ],
-      ).animate().fadeIn(duration: 300.ms),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: AppBar(
+          title: const Text('Native Code Runner'),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Iconsax.info_circle),
+              onPressed: _showInfoDialog,
+            ).animate().shake(delay: 1000.ms),
+          ],
+        ).animate().fadeIn(duration: 300.ms),
+      ),
       body: FutureBuilder<String>(
         future: archDir,
         builder: (context, snapshot) {
