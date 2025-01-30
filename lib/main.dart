@@ -309,7 +309,7 @@ class _BinaryListItemState extends State<_BinaryListItem> {
                             ),
                           )
                               .animate(onPlay: (c) => c.repeat())
-                              .spin(duration: 800.ms)
+                              .rotate(duration: 800.ms)
                         else
                           const Icon(Iconsax.play, size: 18),
                         if (!_isRunning) const SizedBox(width: 8),
